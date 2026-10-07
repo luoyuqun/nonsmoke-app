@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NoneSmoke - 戒烟伙伴</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --green: #4ECDC4;
+    --green-light: #A8E6CF;
+    --green-deep: #2BB3A8;
+    --green-bg: #F0FBF7;
+    --mint: #E8F8F5;
+    --warn: #FF6B6B;
+    --warn-soft: #FFE5E5;
+    --text: #2D3436;
+    --text-sub: #636E72;
+    --card: #FFFFFF;
+    --shadow: 0 4px 20px rgba(78, 205, 196, 0.15);
+  }
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+    background: linear-gradient(135deg, #F0FBF7 0%, #E8F8F5 100%);
+    color: var(--text);
+    height: 100%;
+    overflow: hidden;
+  }
+  .phone {
+    width: 390px;
+    height: 844px;
+    margin: 20px auto;
+    background: var(--green-bg);
+    border-radius: 44px;
+    box-shadow: 0 20px 60px rgba(43, 179, 168, 0.25);
+    overflow: hidden;
+    position: relative;
+    border: 12px solid #1a1a1a;
+  }
+  .status-bar {
+    height: 44px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    background: transparent;
+    position: relative;
+    z-index: 10;
+  }
+  .status-bar .time { font-weight: 700; }
+  .status-bar .icons { display: flex; gap: 5px; align-items: center; }
+  .page {
+    position: absolute;
+    top: 44px;
+    left: 0; right: 0; bottom: 0;
+    overflow-y: auto;
+    padding: 8px 20px 100px;
+    display: none;
+  }
+  .page.active { display: block; }
+  .page::-webkit-scrollbar { width: 0; }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 78px;
+    background: #fff;
+    border-radius: 28px 28px 0 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+    z-index: 20;
+  }
+  .nav-item {
+    flex: 1;
+    text-align: center;
+    color: var(--text-sub);
+    font-size: 11px;
+    cursor: pointer;
+    transition: color 0.2s;
+    padding-top: 4px;
+  }
+  .nav-item.active { color: var(--green-deep); }
+  .nav-item .ic { font-size: 22px; display: block; margin-bottom: 2px; }
+  .nav-item.sos {
+    position: relative;
+    top: -18px;
+  }
+  .nav-item.sos .ic {
+    background: var(--warn);
+    color: #fff;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    line-height: 56px;
+    margin: 0 auto;
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.45);
+    font-size: 24px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 6px 20px rgba(255, 107, 107, 0.45); }
+    50% { transform: scale(1.05); box-shadow: 0 8px 26px rgba(255, 107, 107, 0.6); }
+  }
+
+  /* Common */
+  h2.title { font-size: 22px; font-weight: 800; margin: 16px 0 6px; }
+  h2.title .sub { display: block; font-size: 13px; font-weight: 500; color: var(--text-sub); margin-top: 2px; }
+  .card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+  }
+  .card.tinted { background: linear-gradient(135deg, #A8E6CF 0%, #4ECDC4 100%); color: #fff; }
+  .card.tinted .sub { color: rgba(255,255,255,0.85); }
+  .row { display: flex; align-items: center; gap: 12px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .btn {
+    background: var(--green-deep);
+    color: #fff;
+    border: none;
+    padding: 14px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    width: 100%;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn.outline { background: #fff; color: var(--green-deep); border: 2px solid var(--green); }
+  .btn.warn { background: var(--warn); }
+  .chip { background: var(--mint); color: var(--green-deep); padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; display: inline-block; }
+
+  /* Login */
+  .logo-wrap { text-align: center; padding: 30px 0 20px; }
+  .logo-circle {
+    width: 90px; height: 90px; margin: 0 auto 16px;
+    background: linear-gradient(135deg, var(--green-light), var(--green));
+    border-radius: 26px; display: flex; align-items: center; justify-content: center;
+    font-size: 44px; box-shadow: 0 10px 30px rgba(78,205,196,0.4);
+  }
+  .input {
+    width: 100%; padding: 14px 16px; border: 2px solid #E0F0EC; border-radius: 14px;
+    font-size: 15px; background: #fff; margin-bottom: 12px;
+  }
+  .input:focus { border-color: var(--green); outline: none; }
+
+  /* Progress */
+  .progress-track { height: 8px; background: #EDF7F4; border-radius: 999px; overflow: hidden; margin: 8px 0; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--green-light), var(--green-deep)); border-radius: 999px; transition: width 0.6s; }
+
+  /* SOS big button */
+  .sos-big {
+    width: 180px; height: 180px; margin: 30px auto;
+    background: radial-gradient(circle at 30% 30%, #FF8E8E, var(--warn));
+    border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #fff; cursor: pointer; border: none;
+    box-shadow: 0 20px 50px rgba(255,107,107,0.5);
+    animation: pulseBig 2.4s infinite;
+  }
+  @keyframes pulseBig {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+  }
+  .sos-big .big-text { font-size: 32px; font-weight: 900; }
+  .sos-big .sm-text { font-size: 13px; opacity: 0.9; margin-top: 4px; }
+
+  /* Onboarding */
+  .option {
+    padding: 14px 16px; border: 2px solid #E8F0EC; border-radius: 14px; margin-bottom: 8px;
+    cursor: pointer; transition: all 0.15s; background: #fff; display: flex; align-items: center; gap: 10px;
+  }
+  .option.selected { border-color: var(--green-deep); background: var(--mint); }
+  .option .dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #D5E8E3; flex-shrink: 0; }
+  .option.selected .dot { border-color: var(--green-deep); background: var(--green-deep); box-shadow: inset 0 0 0 4px #fff; }
+  .stepper { display: flex; gap: 6px; margin: 10px 0 20px; }
+  .stepper .step { flex: 1; height: 4px; background: #E0F0EC; border-radius: 999px; }
+  .stepper .step.active { background: var(--green-deep); }
+
+  /* Ring progress */
+  .ring-wrap { position: relative; width: 140px; height: 140px; margin: 0 auto; }
+  .ring { transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke-width: 12; }
+  .ring .bg { stroke: #EDF7F4; }
+  .ring .fg { stroke: var(--green-deep); stroke-linecap: round; transition: stroke-dashoffset 0.8s; }
+  .ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ring-center .num { font-size: 28px; font-weight: 900; color: var(--green-deep); }
+  .ring-center .lbl { font-size: 12px; color: var(--text-sub); }
+
+  /* scenario cards */
+  .scen-card { display: flex; gap: 12px; padding: 14px; background: #fff; border-radius: 16px; margin-bottom: 10px; box-shadow: var(--shadow); align-items: center; }
+  .scen-ic { width: 44px; height: 44px; border-radius: 12px; background: var(--mint); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .scen-name { font-size: 15px; font-weight: 700; }
+  .scen-desc { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+  .toggle { width: 40px; height: 22px; background: #D5E8E3; border-radius: 999px; position: relative; cursor: pointer; transition: background 0.2s; }
+  .toggle.on { background: var(--green-deep); }
+  .toggle .knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: left 0.2s; }
+  .toggle.on .knob { left: 20px; }
+
+  /* buddy */
+  .buddy-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--mint); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+
+  .day-cell { width: 28px; height: 28px; border-radius: 8px; background: #EDF7F4; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-sub); }
+  .day-cell.done { background: var(--green-deep); color: #fff; }
+  .day-cell.miss { background: #FFE5E5; color: var(--warn); }
+
+  .badge { padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .badge.good { background: #E0F7EE; color: var(--green-deep); }
+  .badge.warn { background: var(--warn-soft); color: var(--warn); }
+
+  .hint { font-size: 12px; color: var(--text-sub); line-height: 1.5; }
+
+  /* animation entries */
+  .fade { animation: fadeIn 0.4s; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* breathing circle */
+  .breath-circle {
+    width: 200px; height: 200px; margin: 40px auto;
+    background: radial-gradient(circle, var(--green-light), var(--green));
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 18px; font-weight: 700; text-align: center;
+    animation: breathe 8s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.18); }
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <div class="status-bar">
+    <span class="time">9:41</span>
+    <span class="icons">●●● 📶 🔋</span>
+  </div>
+
+  <!-- ============ LOGIN ============ -->
+  <div class="page active" id="page-login">
+    <div class="logo-wrap">
+      <div class="logo-circle">🚭</div>
+      <h2 style="font-size:26px;">NoneSmoke</h2>
+      <p class="hint" style="margin-top:4px;">轻量戒烟伙伴 · 每一口都算数</p>
+    </div>
+    <div class="card fade">
+      <input class="input" placeholder="手机号 / 邮箱" value="138****8821">
+      <input class="input" type="password" placeholder="密码" value="••••••••">
+      <button class="btn" onclick="go('page-onboard1')">登录</button>
+      <div style="text-align:center;margin:14px 0 6px;color:var(--text-sub);font-size:13px;">— 或 —</div>
+      <button class="btn outline" onclick="go('page-onboard1')">微信一键登录</button>
+      <p class="hint" style="text-align:center;margin-top:14px;">新用户? <span style="color:var(--green-deep);font-weight:700;">注册即送7天新手计划</span></p>
+    </div>
+    <p class="hint" style="text-align:center;margin-top:20px;">登录即同意《用户协议》《隐私政策》</p>
+  </div>
+
+  <!-- ============ ONBOARDING STEP 1 ============ -->
+  <div class="page" id="page-onboard1">
+    <h2 class="title">让我们更懂你 <span class="sub">第 1 步 / 共 4 步 · 你的吸烟习惯</span></h2>
+    <div class="stepper"><div class="step active"></div><div class="step"></div><div class="step"></div><div class="step"></div></div>
+    <div class="card">
+      <p style="font-weight:700;margin-bottom:10px;">你通常每天抽几支?</p>
+      <div class="option selected" onclick="selOpt(this)"><div class="dot"></div>10 支以下 · 轻度</div>
+      <div class="option" onclick="selOpt(this)"><div class="dot"></div>10–20 支 · 中度</div>
+      <div class="option" onclick="selOpt(this)"><div class="dot"></div>20 支以上 · 重度</div>
+    </div>
+    <div class="card">
+      <p style="font-weight:700;margin-bottom:10px;">哪个场景最让你想点烟?</p>
+      <div class="option selected" onclick="selOpt(this)"><div class="dot"></div>饭后</div>
+      <div class="option" onclick="selOpt(this)"><div class="dot"></div>熬夜工作</div>
+      <div class="option" onclick="selOpt(this)"><div class="dot"></div>压力大时</div>
+      <div class="option" onclick="selOpt(this)"><div class="dot"></div>社交聚餐</div>
+    </div>
+    <button class="btn" onclick="go('page-onboard2')">下一步</button>
+    <button class="btn outline" onclick="go('page-login')" style="margin-top:8px;">返回登录</button>
+  </div>
+
+  <!-- ============ ONBOARDING STEP 2 ============ -->
+  <div class="page" id="page-onboard2">
+    <h2 class="title">设置你的目标 <span class="sub">第 2 步 / 共 4 步 · 个性化激励</span></h2>
+    <div class="stepper"><div class="step active"></div><div class="step active"></div><div class="step"></div><div class="step"></div></div>
+    <div class="card">
+      <p style="font-weight:700;margin-bottom:10px;">连续打卡 21 天,奖励自己什么?</p>
+      <input class="input" placeholder="例如:AirPods / 一顿火锅..." value="一双新跑鞋">
+      <p class="hint">把目标写具体,坚持的回报会看得见。</p>
+    </div>
+    <div class="card">
+      <p style="font-weight:700;margin-bottom:10px;">每支烟你大概花多少钱?</p>
+      <div class="option selected" onclick="selOpt(this)"><div class="dot"></div>约 ¥1.5 / 支</div>
+      <div class="option" onclick="selOpt(this)"><div class="dot"></div>约 ¥2.5 / 支</div>
+      <div class="option" onclick="selOpt(this)"><div class="dot"></div>自定义</div>
+    </div>
+    <button class="btn" onclick="go('page-onboard3')">下一步</button>
+    <button class="btn outline" onclick="go('page-onboard1')" style="margin-top:8px;">上一步</button>
+  </div>
+
+  <!-- ============ ONBOARDING STEP 3 ============ -->
+  <div class="page" id="page-onboard3">
+    <h2 class="title">信任的伙伴 <span class="sub">第 3 步 / 共 4 步 · 轻量监督</span></h2>
+    <div class="stepper"><div class="step active"></div><div class="step active"></div><div class="step active"></div><div class="step"></div></div>
+    <div class="card tinted" style="color:#fff;">
+      <p style="font-weight:700;">只需 1–2 位最信任的人</p>
+      <p class="sub" style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:6px;">室友、伴侣或死党即可。每晚自动打卡,不会骚扰你通讯录。</p>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px;">
+        <div class="buddy-avatar">🧑</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;">阿杰 · 室友</div>
+          <div class="hint">已添加</div>
+        </div>
+        <span class="badge good">监督中</span>
+      </div>
+      <button class="btn outline" style="margin-top:6px;">+ 添加第 2 位伙伴</button>
+      <p class="hint" style="margin-top:10px;">最多 2 人 · 不开放大群社交</p>
+    </div>
+    <button class="btn" onclick="go('page-onboard4')">下一步</button>
+    <button class="btn outline" onclick="go('page-onboard2')" style="margin-top:8px;">上一步</button>
+  </div>
+
+  <!-- ============ ONBOARDING STEP 4 ============ -->
+  <div class="page" id="page-onboard4">
+    <h2 class="title">就这些啦! <span class="sub">第 4 步 / 共 4 步 · 准备启程</span></h2>
+    <div class="stepper"><div class="step active"></div><div class="step active"></div><div class="step active"></div><div class="step active"></div></div>
+    <div class="card tinted" style="color:#fff;text-align:center;">
+      <div style="font-size:48px;">🌱</div>
+      <p style="font-weight:800;font-size:20px;margin-top:8px;">欢迎成为非吸烟者</p>
+      <p class="sub" style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:6px;">你的戒烟第 1 天 · 从现在开始计数</p>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <span>起步烟量</span><b>10 支/天</b>
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:8px;">
+        <span>每支花费</span><b>¥1.5</b>
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:8px;">
+        <span>监督伙伴</span><b>1 位</b>
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:8px;">
+        <span>打卡目标</span><b>21 天 · 跑鞋</b>
+      </div>
+    </div>
+    <button class="btn" onclick="go('page-home')">开始我的第 1 天</button>
+    <button class="btn outline" onclick="go('page-onboard3')" style="margin-top:8px;">上一步</button>
+  </div>
+
+  <!-- ============ HOME ============ -->
+  <div class="page" id="page-home">
+    <div class="row" style="justify-content:space-between;align-items:center;margin:10px 0;">
+      <div>
+        <div class="hint">早上好,小柯</div>
+        <div style="font-size:20px;font-weight:900;">今天是戒烟第 <span style="color:var(--green-deep)">7</span> 天</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="chip">🔥 连续 7 天</div>
+      </div>
+    </div>
+
+    <!-- Day tiny progress -->
+    <div class="card tinted fade" style="color:#fff;">
+      <div class="row" style="justify-content:space-between;">
+        <div>
+          <div style="font-size:13px;opacity:0.9;">今日已省下</div>
+          <div style="font-size:26px;font-weight:900;">¥15.0</div>
+          <div style="font-size:12px;opacity:0.85;">累计 ¥105 · 跑鞋 35%</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:30px;">🫁</div>
+          <div style="font-size:12px;opacity:0.9;margin-top:4px;">肺修复 +2.3%</div>
+        </div>
+      </div>
+      <div class="progress-track" style="background:rgba(255,255,255,0.25);margin-top:12px;">
+        <div class="progress-fill" style="width:35%;background:rgba(255,255,255,0.95);"></div>
+      </div>
+      <div style="font-size:11px;opacity:0.85;margin-top:4px;">距离「一双新跑鞋」还差 ¥195</div>
+    </div>
+
+    <!-- SOS big button -->
+    <div style="text-align:center;">
+      <div class="sos-big" onclick="go('page-sos')">
+        <div class="big-text">SOS</div>
+        <div class="sm-text">烟瘾突袭 · 一键急救</div>
+      </div>
+      <p class="hint">深夜赶项目压力大? 点一下,5 分钟内陪你扛过去</p>
+    </div>
+
+    <!-- Scenario smart hint -->
+    <div class="card" style="border-left:4px solid var(--green-deep);">
+      <div class="row" style="align-items:flex-start;">
+        <div style="font-size:22px;">🌙</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:14px;">检测到:现在是你的「熬夜高发时段」</div>
+          <div class="hint" style="margin-top:4px;">过去 7 天你在 23:00 后点烟 5 次。建议现在起身倒杯水,顺带做 1 分钟肩颈拉伸。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- quick tips -->
+    <div class="card" style="background:var(--mint);">
+      <div style="font-weight:700;color:var(--green-deep);font-size:14px;">💡 今日小贴士</div>
+      <div class="hint" style="margin-top:6px;color:var(--text);">戒烟后嘴馋变多属正常。备点小番茄、无糖口香糖,既解馋又防体重上涨。</div>
+    </div>
+  </div>
+
+  <!-- ============ SOS ============ -->
+  <div class="page" id="page-sos">
+    <div style="text-align:center;padding:10px 0;">
+      <div style="font-size:14px;color:var(--text-sub);">我懂你,现在很难受。挑一个试试:</div>
+    </div>
+
+    <div class="breath-circle">
+      <div>
+        <div style="font-size:22px;">60 秒呼吸</div>
+        <div style="font-size:12px;opacity:0.9;margin-top:4px;">吸 4 秒 · 屏 4 秒 · 呼 6 秒</div>
+      </div>
+    </div>
+    <p class="hint" style="text-align:center;">跟随圆圈呼吸节奏,正在播放…</p>
+
+    <div class="card" onclick="" style="cursor:pointer;">
+      <div class="row">
+        <div style="font-size:24px;">🎧</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;">2 分钟分心音频</div>
+          <div class="hint">雨声 + 轻钢琴 · 把注意力移走</div>
+        </div>
+        <span class="chip">▶ 播放</span>
+      </div>
+    </div>
+
+    <div class="card" onclick="" style="cursor:pointer;">
+      <div class="row">
+        <div style="font-size:24px;">🗣️</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;">温柔语音陪伴</div>
+          <div class="hint">"这 5 分钟过去,你就赢了今天"</div>
+        </div>
+        <span class="chip">▶ 播放</span>
+      </div>
+    </div>
+
+    <div class="card tinted" style="color:#fff;text-align:center;">
+      <div style="font-size:28px;font-weight:900;" id="holdTimer">05:00</div>
+      <div style="font-size:13px;opacity:0.9;margin-top:4px;">再坚持 5 分钟,冲动会自然消退</div>
+      <button class="btn" style="background:#fff;color:var(--warn);margin-top:10px;" onclick="startHold()">开始 5 分钟倒计时</button>
+    </div>
+
+    <div class="card" style="background:var(--mint);">
+      <div style="font-weight:700;color:var(--green-deep);">🍽️ 戒烟后怕长胖?</div>
+      <div class="hint" style="margin-top:6px;color:var(--text);">
+        ✓ 饭后散步 10 分钟,稳血糖<br>
+        ✓ 备高纤维零食:小番茄 / 黄瓜条<br>
+        ✓ 多喝水,嘴馋先喝一杯<br>
+        ✓ 每天 7 分钟拉伸,见健康页 →
+      </div>
+    </div>
+
+    <button class="btn outline" onclick="go('page-home')" style="margin-top:8px;">回到首页</button>
+  </div>
+
+  <!-- ============ SCENARIO ============ -->
+  <div class="page" id="page-scenario">
+    <h2 class="title">场景化干预 <span class="sub">基于你的个人吸烟规律自动触发</span></h2>
+
+    <div class="scen-card">
+      <div class="scen-ic">🍚</div>
+      <div style="flex:1;">
+        <div class="scen-name">饭后时段</div>
+        <div class="scen-desc">每天 12:30 / 19:00 · 推送「漱口+散步」替代动作</div>
+      </div>
+      <div class="toggle on" onclick="tog(this)"><div class="knob"></div></div>
+    </div>
+
+    <div class="scen-card">
+      <div class="scen-ic">🌙</div>
+      <div style="flex:1;">
+        <div class="scen-name">熬夜工作</div>
+        <div class="scen-desc">23:00 后 · 推送拉伸 + 热水替代</div>
+      </div>
+      <div class="toggle on" onclick="tog(this)"><div class="knob"></div></div>
+    </div>
+
+    <div class="scen-card">
+      <div class="scen-ic">💼</div>
+      <div style="flex:1;">
+        <div class="scen-name">工作压力</div>
+        <div class="scen-desc">日历有密集会议时 · 触发 90 秒呼吸</div>
+      </div>
+      <div class="toggle on" onclick="tog(this)"><div class="knob"></div></div>
+    </div>
+
+    <div class="scen-card">
+      <div class="scen-ic">🍻</div>
+      <div style="flex:1;">
+        <div class="scen-name">社交聚餐</div>
+        <div class="scen-desc">识别餐厅/酒吧定位 · 提前预演拒烟台词</div>
+      </div>
+      <div class="toggle" onclick="tog(this)"><div class="knob"></div></div>
+    </div>
+
+    <div class="card" style="background:var(--mint);">
+      <div style="font-weight:700;color:var(--green-deep);font-size:14px;">🚫 不再有「吸烟有害健康」式唠叨</div>
+      <div class="hint" style="margin-top:6px;color:var(--text);">所有提醒都基于你的真实场景给具体动作建议,不说教。</div>
+    </div>
+
+    <h2 class="title" style="font-size:16px;margin-top:10px;">今晚预告</h2>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <div>
+          <div style="font-weight:700;font-size:14px;">23:00 · 熬夜高发</div>
+          <div class="hint">自动弹出拉伸提醒</div>
+        </div>
+        <span class="chip">已排程</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ HEALTH ============ -->
+  <div class="page" id="page-health">
+    <h2 class="title">健康恢复 <span class="sub">每一天都在变好</span></h2>
+
+    <div class="card" style="text-align:center;">
+      <div class="ring-wrap">
+        <svg class="ring" width="140" height="140">
+          <circle class="bg" cx="70" cy="70" r="60"></circle>
+          <circle class="fg" cx="70" cy="70" r="60" stroke-dasharray="377" stroke-dashoffset="226"></circle>
+        </svg>
+        <div class="ring-center">
+          <div class="num">40%</div>
+          <div class="lbl">肺功能修复</div>
+        </div>
+      </div>
+      <div class="chip" style="margin-top:6px;">较昨日 +2.3%</div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;font-size:14px;margin-bottom:10px;">📊 7 日恢复曲线</div>
+      <svg width="100%" height="80" viewBox="0 0 320 80">
+        <polyline points="10,60 50,55 90,48 130,42 170,35 210,28 250,22 300,15"
+          fill="none" stroke="var(--green-deep)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="10,60 50,55 90,48 130,42 170,35 210,28 250,22 300,15 300,80 10,80"
+          fill="rgba(78,205,196,0.15)" stroke="none"/>
+        <circle cx="300" cy="15" r="5" fill="var(--green-deep)"/>
+      </svg>
+      <div class="row" style="justify-content:space-between;font-size:11px;color:var(--text-sub);">
+        <span>D1</span><span>D2</span><span>D3</span><span>D4</span><span>D5</span><span>D6</span><span>今天</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;font-size:14px;">今日 vs 昨日</div>
+      <div class="row" style="justify-content:space-between;margin-top:10px;">
+        <span>血氧</span>
+        <span><b>98.5%</b> <span class="badge good">↑0.3</span></span>
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:8px;">
+        <span>静息心率</span>
+        <span><b>72 bpm</b> <span class="badge good">↓2</span></span>
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:8px;">
+        <span>味觉敏锐度</span>
+        <span><b>提升</b> <span class="badge good">↑</span></span>
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:8px;">
+        <span>晨起咳嗽</span>
+        <span><b>减轻</b> <span class="badge good">↓</span></span>
+      </div>
+    </div>
+
+    <div class="card" style="background:var(--mint);">
+      <div style="font-weight:700;color:var(--green-deep);font-size:14px;">🧘 7 分钟身体放松</div>
+      <div class="hint" style="margin-top:6px;color:var(--text);">肩颈 + 横膈膜呼吸 · 缓解戒烟初期紧张感</div>
+      <button class="btn" style="margin-top:10px;">▶ 开始今日放松</button>
+    </div>
+  </div>
+
+  <!-- ============ REWARD ============ -->
+  <div class="page" id="page-reward">
+    <h2 class="title">我的激励 <span class="sub">看得见的每一支省下的烟</span></h2>
+
+    <div class="card tinted" style="color:#fff;text-align:center;">
+      <div style="font-size:13px;opacity:0.9;">连续打卡</div>
+      <div style="font-size:42px;font-weight:900;">7 / 21 天</div>
+      <div class="progress-track" style="background:rgba(255,255,255,0.25);margin-top:8px;">
+        <div class="progress-fill" style="width:33%;background:rgba(255,255,255,0.95);"></div>
+      </div>
+      <div style="font-size:12px;opacity:0.9;margin-top:6px;">目标:一双新跑鞋 ¥300</div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <div>
+          <div style="font-weight:700;font-size:14px;">💰 累计省下</div>
+          <div class="hint">10 支/天 × ¥1.5 × 7 天</div>
+        </div>
+        <div style="font-size:24px;font-weight:900;color:var(--green-deep);">¥105</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;font-size:14px;margin-bottom:10px;">📅 本周打卡</div>
+      <div style="display:flex;gap:6px;justify-content:space-between;">
+        <div class="day-cell done">一</div>
+        <div class="day-cell done">二</div>
+        <div class="day-cell done">三</div>
+        <div class="day-cell done">四</div>
+        <div class="day-cell done">五</div>
+        <div class="day-cell done">六</div>
+        <div class="day-cell done">日</div>
+      </div>
+      <p class="hint" style="margin-top:8px;">少一次打卡会丢失 1 天进度,但中断不会清零 — 周日还有 1 次补救机会。</p>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;font-size:14px;margin-bottom:10px;">🫁 肺修复里程碑</div>
+      <div class="row" style="justify-content:space-between;font-size:13px;">
+        <span>D1</span><span class="badge good">已达成</span>
+      </div>
+      <div class="row" style="justify-content:space-between;font-size:13px;margin-top:8px;">
+        <span>D3 · 尼古丁基本代谢</span><span class="badge good">已达成</span>
+      </div>
+      <div class="row" style="justify-content:space-between;font-size:13px;margin-top:8px;">
+        <span>D7 · 味嗅觉恢复</span><span class="badge good">今天 ✓</span>
+      </div>
+      <div class="row" style="justify-content:space-between;font-size:13px;margin-top:8px;opacity:0.5;">
+        <span>D21 · 肺功能 +20%</span><span class="badge">14 天后</span>
+      </div>
+    </div>
+
+    <div class="card" style="background:var(--mint);">
+      <div style="font-weight:700;color:var(--green-deep);font-size:14px;">✏️ 调整我的目标</div>
+      <div class="hint" style="margin-top:6px;color:var(--text);">随时可改奖励项目与天数,系统按新目标重算进度。</div>
+      <button class="btn outline" style="margin-top:10px;">编辑目标</button>
+    </div>
+  </div>
+
+  <!-- ============ BUDDY ============ -->
+  <div class="page" id="page-buddy">
+    <h2 class="title">信任伙伴 <span class="sub">只 invite 1–2 位最亲的人</span></h2>
+
+    <div class="card tinted" style="color:#fff;">
+      <div style="font-weight:700;">不开放大群社交</div>
+      <div style="font-size:13px;opacity:0.9;margin-top:6px;">理论支持监督 ≠ 愿意公开戒烟。所以这里只有你和你的室友。</div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:14px;">
+        <div class="buddy-avatar">🧑</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;">阿杰 · 室友</div>
+          <div class="hint">陪伴第 7 天</div>
+        </div>
+        <span class="badge good">在线</span>
+      </div>
+      <div class="row" style="justify-content:space-between;">
+        <span style="font-size:13px;">阿杰今晚打卡</span>
+        <span class="chip">23:00 自动提醒</span>
+      </div>
+      <div class="progress-track" style="margin-top:10px;">
+        <div class="progress-fill" style="width:71%;"></div>
+      </div>
+      <div class="hint" style="margin-top:6px;">阿杰本周已坚持 5/7 天,你比他领先 2 天 👍</div>
+    </div>
+
+    <div class="card" style="background:var(--mint);">
+      <div style="font-weight:700;color:var(--green-deep);font-size:14px;">🌙 今晚夜打卡</div>
+      <div class="hint" style="margin-top:6px;color:var(--text);">每晚 23:00 互相确认「今天没抽」。漏打卡,伙伴会收到一条轻提示(不打扰)。</div>
+      <button class="btn" style="margin-top:10px;">✓ 我今天没抽</button>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;font-size:14px;margin-bottom:10px;">互发一句话</div>
+      <div class="row" style="background:var(--mint);padding:10px;border-radius:10px;margin-bottom:6px;">
+        <div style="font-size:13px;">"昨天我也差点破,熬过去了,你也行"</div>
+      </div>
+      <div class="row" style="background:#F5FAF8;padding:10px;border-radius:10px;justify-content:flex-end;">
+        <div style="font-size:13px;">谢了兄弟,明早一起跑步</div>
+      </div>
+      <input class="input" placeholder="发一句鼓励…" style="margin-top:8px;">
+    </div>
+
+    <button class="btn outline">+ 添加第 2 位伙伴 (上限 2)</button>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <div class="bottom-nav">
+    <div class="nav-item active" onclick="go('page-home')">
+      <span class="ic">🏠</span>首页
+    </div>
+    <div class="nav-item" onclick="go('page-health')">
+      <span class="ic">🫁</span>健康
+    </div>
+    <div class="nav-item sos" onclick="go('page-sos')">
+      <span class="ic">SOS</span>
+    </div>
+    <div class="nav-item" onclick="go('page-reward')">
+      <span class="ic">🎁</span>激励
+    </div>
+    <div class="nav-item" onclick="go('page-buddy')">
+      <span class="ic">👥</span>伙伴
+    </div>
+  </div>
+</div>
+
+<script>
+  function go(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const pg = document.getElementById(id);
+    pg.classList.add('active', 'fade');
+    pg.scrollTop = 0;
+    setTimeout(() => pg.classList.remove('fade'), 400);
+    // Update nav active
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const map = {
+      'page-home': 0, 'page-health': 1, 'page-sos': 2, 'page-reward': 3, 'page-buddy': 4
+    };
+    const navs = document.querySelectorAll('.nav-item');
+    if (map[id] !== undefined && navs[map[id]]) navs[map[id]].classList.add('active');
+  }
+  function selOpt(el) {
+    const sibs = el.parentElement.querySelectorAll('.option');
+    sibs.forEach(s => s.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+  function tog(el) {
+    el.classList.toggle('on');
+  }
+  function startHold() {
+    let total = 5 * 60;
+    const el = document.getElementById('holdTimer');
+    const timer = setInterval(() => {
+      total--;
+      const m = String(Math.floor(total/60)).padStart(2,'0');
+      const s = String(total%60).padStart(2,'0');
+      el.textContent = m + ':' + s;
+      if (total <= 0) {
+        clearInterval(timer);
+        el.textContent = '✓ 你赢了';
+      }
+    }, 1000);
+  }
+</script>
+</body>
+</html>
